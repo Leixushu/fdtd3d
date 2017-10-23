@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 BASE_DIR=$1
 SOURCE_DIR=$2
 
@@ -8,6 +10,7 @@ function launch ()
   size="$1"
   timesteps="$2"
   dx="$3"
+  length="$4"
 
   lambda="0.02"
   #length=$(echo $timesteps | awk '{print $1 / 5}')
@@ -18,11 +21,12 @@ function launch ()
     --courant-factor 0.5 &>/dev/null
 
   retval=$((0))
+  error=$((0))
 
-  norm_exact="0.0"
-  norm_numerical="0.0"
+  #norm_exact="0.0"
+  #norm_numerical="0.0"
 
-  for line_num in `seq 1 1 10`; do
+  for line_num in `seq 1 1 $length`; do
     # exact value
     i=$(echo $line_num | awk '{print $1 - 1}')
     n=$(echo $timesteps | awk '{print $1 - 1}')
@@ -40,7 +44,7 @@ function launch ()
     numerical_val_im=$(echo $line | awk '{printf "%.17g", $3}')
     numerical_val_mod=$(echo $numerical_val_re $numerical_val_im | awk '{printf "%.17g", sqrt($1 * $1 + $2 * $2)}')
 
-    echo "$exact_val_mod | $numerical_val_mod"
+    #echo "$exact_val_mod | $numerical_val_mod"
 
     if [ $i -ne $index ]; then
       echo "Incorrect output from fdtd3d"
@@ -48,18 +52,20 @@ function launch ()
       break
     fi
 
-    norm_exact=$(echo $norm_exact $exact_val_mod | awk '{printf "%.17g", $1 + $2 * $2}')
-    norm_numerical=$(echo $norm_numerical $numerical_val_mod | awk '{printf "%.17g", $1 + $2 * $2}')
+    #norm_exact=$(echo $norm_exact $exact_val_mod | awk '{printf "%.17g", $1 + $2 * $2}')
+    #norm_numerical=$(echo $norm_numerical $numerical_val_mod | awk '{printf "%.17g", $1 + $2 * $2}')
+    error=$(echo $error $exact_val_mod $numerical_val_mod | awk '{printf "%.17g", $1 + ($2-$3)*($2-$3)}')
   done
 
   cp current\[$timesteps\]_rank-0_EInc.txt $dx.txt
 
-  norm_exact=$(echo $norm_exact | awk '{printf "%.17g", sqrt($1)}')
-  norm_numerical=$(echo $norm_numerical | awk '{printf "%.17g", sqrt($1)}')
+  #norm_exact=$(echo $norm_exact | awk '{printf "%.17g", sqrt($1)}')
+  #norm_numerical=$(echo $norm_numerical | awk '{printf "%.17g", sqrt($1)}')
 
-  echo "!! $norm_exact | $norm_numerical"
+  #echo "!! $norm_exact | $norm_numerical"
 
-  error=$(echo $norm_exact $norm_numerical | awk 'function abs(v) {return v < 0 ? -v : v} {printf "%.17g", abs($1 - $2)}')
+  error=$(echo $error | awk '{printf "%.17g", $1}')
+  #error=$(echo $norm_exact $norm_numerical | awk 'function abs(v) {return v < 0 ? -v : v} {printf "%.17g", abs($1 - $2)}')
 
   rm current\[*
 
@@ -73,13 +79,13 @@ cd $TEST_DIR
 size="10"
 retval=$((0))
 
-launch $size 1001 0.0004
+launch $size 1001 0.0004 100
 error1=$(echo $error)
 if [ $? -ne 0 ]; then
   retval=$((1))
 fi
 
-launch $size 2001 0.0002
+launch $size 2001 0.0002 200
 error2=$(echo $error)
 if [ $? -ne 0 ]; then
   retval=$((1))

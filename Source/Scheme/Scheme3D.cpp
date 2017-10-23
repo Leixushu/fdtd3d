@@ -241,8 +241,8 @@ Scheme3D::Scheme3D (YeeGridLayout *layout,
 
   if (solverSettings.getDoUseTFSF ())
   {
-    EInc = new Grid<GridCoordinate1D> (GridCoordinate1D ((grid_coord) 100*(totSize.getX () + totSize.getY () + totSize.getZ ())), 0, "EInc");
-    HInc = new Grid<GridCoordinate1D> (GridCoordinate1D ((grid_coord) 100*(totSize.getX () + totSize.getY () + totSize.getZ ())), 0, "HInc");
+    EInc = new Grid<GridCoordinate1D> (GridCoordinate1D ((grid_coord) 500*(totSize.getX () + totSize.getY () + totSize.getZ ())), 0, "EInc");
+    HInc = new Grid<GridCoordinate1D> (GridCoordinate1D ((grid_coord) 500*(totSize.getX () + totSize.getY () + totSize.getZ ())), 0, "HInc");
   }
 
   ASSERT (!solverSettings.getDoUseTFSF ()
