@@ -45,6 +45,12 @@ Scheme3D::Scheme3D (YeeGridLayout *layout,
   , B1x (NULLPTR)
   , B1y (NULLPTR)
   , B1z (NULLPTR)
+  , Jx (NULLPTR)
+  , Jy (NULLPTR)
+  , Jz (NULLPTR)
+  , Mx (NULLPTR)
+  , My (NULLPTR)
+  , Mz (NULLPTR)
   , ExAmplitude (NULLPTR)
   , EyAmplitude (NULLPTR)
   , EzAmplitude (NULLPTR)
@@ -102,6 +108,13 @@ Scheme3D::Scheme3D (YeeGridLayout *layout,
     Hx = new ParallelGrid (parallelYeeLayout->getHxSize (), bufSize, 0, parallelYeeLayout->getHxSizeForCurNode (), "Hx");
     Hy = new ParallelGrid (parallelYeeLayout->getHySize (), bufSize, 0, parallelYeeLayout->getHySizeForCurNode (), "Hy");
     Hz = new ParallelGrid (parallelYeeLayout->getHzSize (), bufSize, 0, parallelYeeLayout->getHzSizeForCurNode (), "Hz");
+
+    Jx = new ParallelGrid (parallelYeeLayout->getExSize (), bufSize, 0, parallelYeeLayout->getExSizeForCurNode (), "Jx");
+    Jy = new ParallelGrid (parallelYeeLayout->getEySize (), bufSize, 0, parallelYeeLayout->getEySizeForCurNode (), "Jy");
+    Jz = new ParallelGrid (parallelYeeLayout->getEzSize (), bufSize, 0, parallelYeeLayout->getEzSizeForCurNode (), "Jz");
+    Mx = new ParallelGrid (parallelYeeLayout->getHxSize (), bufSize, 0, parallelYeeLayout->getHxSizeForCurNode (), "Mx");
+    My = new ParallelGrid (parallelYeeLayout->getHySize (), bufSize, 0, parallelYeeLayout->getHySizeForCurNode (), "My");
+    Mz = new ParallelGrid (parallelYeeLayout->getHzSize (), bufSize, 0, parallelYeeLayout->getHzSizeForCurNode (), "Mz");
 
     if (solverSettings.getDoUsePML ())
     {
@@ -188,6 +201,13 @@ Scheme3D::Scheme3D (YeeGridLayout *layout,
     Hx = new Grid<GridCoordinate3D> (layout->getHxSize (), 0, "Hx");
     Hy = new Grid<GridCoordinate3D> (layout->getHySize (), 0, "Hy");
     Hz = new Grid<GridCoordinate3D> (layout->getHzSize (), 0, "Hz");
+
+    Jx = new Grid<GridCoordinate3D> (layout->getExSize (), 0, "Jx");
+    Jy = new Grid<GridCoordinate3D> (layout->getEySize (), 0, "Jy");
+    Jz = new Grid<GridCoordinate3D> (layout->getEzSize (), 0, "Jz");
+    Mx = new Grid<GridCoordinate3D> (layout->getMxSize (), 0, "Mx");
+    My = new Grid<GridCoordinate3D> (layout->getMySize (), 0, "My");
+    Mz = new Grid<GridCoordinate3D> (layout->getMzSize (), 0, "Mz");
 
     if (solverSettings.getDoUsePML ())
     {
@@ -383,6 +403,14 @@ Scheme3D::~Scheme3D ()
   delete Hx;
   delete Hy;
   delete Hz;
+
+  delete Jx;
+  delete Jy;
+  delete Jz;
+
+  delete Mx;
+  delete My;
+  delete Mz;
 
   if (solverSettings.getDoUsePML ())
   {
@@ -691,6 +719,7 @@ Scheme3D::calculateExStep (time_step t, GridCoordinate3D ExStart, GridCoordinate
         GridCoordinate3D posAbs = Ex->getTotalPosition (pos);
 
         FieldPointValue* valEx = Ex->getFieldPointValue (pos);
+        FieldValue prevJx = getPrevJx (posAbs);
 
         FPValue eps = yeeLayout->getMaterial (posAbs, GridType::EX, Eps, GridType::EPS);
 
@@ -721,6 +750,7 @@ Scheme3D::calculateExStep (time_step t, GridCoordinate3D ExStart, GridCoordinate
                                          prevHz2,
                                          prevHy1,
                                          prevHy2,
+                                         prevJx,
                                          gridTimeStep,
                                          gridStep,
                                          eps * eps0);
@@ -746,6 +776,7 @@ Scheme3D::calculateExStepPML (time_step t, GridCoordinate3D ExStart, GridCoordin
         GridCoordinate3D posAbs = Dx->getTotalPosition (pos);
 
         FieldPointValue* valDx = Dx->getFieldPointValue (pos);
+        FieldPointValue* valJx = Jx->getFieldPointValue (pos);
 
         FPValue sigmaY = yeeLayout->getMaterial (posAbs, GridType::DX, SigmaY, GridType::SIGMAY);
 
@@ -785,7 +816,8 @@ Scheme3D::calculateExStepPML (time_step t, GridCoordinate3D ExStart, GridCoordin
                                                  prevHy1,
                                                  prevHy2,
                                                  Ca,
-                                                 Cb);
+                                                 Cb,
+                                                 valJx->getPrevValue () * gridStep);
 
         valDx->setCurValue (val);
       }
@@ -997,6 +1029,7 @@ Scheme3D::calculateEyStep (time_step t, GridCoordinate3D EyStart, GridCoordinate
         GridCoordinate3D posAbs = Ey->getTotalPosition (pos);
 
         FieldPointValue* valEy = Ey->getFieldPointValue (pos);
+        FieldPointValue* valJy = Jy->getFieldPointValue (pos);
 
         FPValue eps = yeeLayout->getMaterial (posAbs, GridType::EY, Eps, GridType::EPS);
 
@@ -1027,6 +1060,7 @@ Scheme3D::calculateEyStep (time_step t, GridCoordinate3D EyStart, GridCoordinate
                                          prevHx2,
                                          prevHz1,
                                          prevHz2,
+                                         valJy->getPrevValue (),
                                          gridTimeStep,
                                          gridStep,
                                          eps * eps0);
@@ -1052,6 +1086,7 @@ Scheme3D::calculateEyStepPML (time_step t, GridCoordinate3D EyStart, GridCoordin
         GridCoordinate3D posAbs = Dy->getTotalPosition (pos);
 
         FieldPointValue* valDy = Dy->getFieldPointValue (pos);
+        FieldPointValue* valJy = Jy->getFieldPointValue (pos);
 
         FPValue sigmaZ = yeeLayout->getMaterial (posAbs, GridType::DY, SigmaZ, GridType::SIGMAZ);
 
@@ -1091,7 +1126,8 @@ Scheme3D::calculateEyStepPML (time_step t, GridCoordinate3D EyStart, GridCoordin
                                                  prevHz1,
                                                  prevHz2,
                                                  Ca,
-                                                 Cb);
+                                                 Cb,
+                                                 valJy->getPrevValue () * gridStep);
 
         valDy->setCurValue (val);
       }
@@ -1303,6 +1339,7 @@ Scheme3D::calculateEzStep (time_step t, GridCoordinate3D EzStart, GridCoordinate
         GridCoordinate3D posAbs = Ez->getTotalPosition (pos);
 
         FieldPointValue* valEz = Ez->getFieldPointValue (pos);
+        FieldPointValue* valJz = Jz->getFieldPointValue (pos);
 
         FPValue eps = yeeLayout->getMaterial (posAbs, GridType::EZ, Eps, GridType::EPS);
 
@@ -1332,6 +1369,7 @@ Scheme3D::calculateEzStep (time_step t, GridCoordinate3D EzStart, GridCoordinate
                                          prevHy2,
                                          prevHx1,
                                          prevHx2,
+                                         valJz->getPrevValue (),
                                          gridTimeStep,
                                          gridStep,
                                          eps * eps0);

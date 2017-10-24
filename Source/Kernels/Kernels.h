@@ -10,68 +10,68 @@
  */
 
 /* 3D Kernels with precalculated coefficients */
-#define calculateEx_3D_Precalc(oldEx, Hz1, Hz2, Hy1, Hy2, Ca, Cb) \
-  ((Ca) * (oldEx) + (Cb) * ((Hz1) - (Hz2) - (Hy1) + (Hy2)))
+#define calculateEx_3D_Precalc(oldEx, Hz1, Hz2, Hy1, Hy2, Ca, Cb, Jx_delta) \
+  ((Ca) * (oldEx) + (Cb) * ((Hz1) - (Hz2) - (Hy1) + (Hy2) - Jx_delta))
 
-#define calculateEy_3D_Precalc(oldEy, Hx1, Hx2, Hz1, Hz2, Ca, Cb) \
-  ((Ca) * (oldEy) + (Cb) * ((Hx1) - (Hx2) - (Hz1) + (Hz2)))
+#define calculateEy_3D_Precalc(oldEy, Hx1, Hx2, Hz1, Hz2, Ca, Cb, Jy_delta) \
+  ((Ca) * (oldEy) + (Cb) * ((Hx1) - (Hx2) - (Hz1) + (Hz2) - Jy_delta))
 
-#define calculateEz_3D_Precalc(oldEz, Hy1, Hy2, Hx1, Hx2, Ca, Cb) \
-  ((Ca) * (oldEz) + (Cb) * ((Hy1) - (Hy2) - (Hx1) + (Hx2)))
+#define calculateEz_3D_Precalc(oldEz, Hy1, Hy2, Hx1, Hx2, Ca, Cb, Jz_delta) \
+  ((Ca) * (oldEz) + (Cb) * ((Hy1) - (Hy2) - (Hx1) + (Hx2) - Jz_delta))
 
-#define calculateHx_3D_Precalc(oldHx, Ey1, Ey2, Ez1, Ez2, Da, Db) \
-  ((Da) * (oldHx) + (Db) * ((Ey1) - (Ey2) - (Ez1) + (Ez2)))
+#define calculateHx_3D_Precalc(oldHx, Ey1, Ey2, Ez1, Ez2, Da, Db, Mx_delta) \
+  ((Da) * (oldHx) + (Db) * ((Ey1) - (Ey2) - (Ez1) + (Ez2) - Mx_delta))
 
-#define calculateHy_3D_Precalc(oldHy, Ez1, Ez2, Ex1, Ex2, Da, Db) \
-  ((Da) * (oldHy) + (Db) * ((Ez1) - (Ez2) - (Ex1) + (Ex2)))
+#define calculateHy_3D_Precalc(oldHy, Ez1, Ez2, Ex1, Ex2, Da, Db, My_delta) \
+  ((Da) * (oldHy) + (Db) * ((Ez1) - (Ez2) - (Ex1) + (Ex2) - My_delta))
 
-#define calculateHz_3D_Precalc(oldHz, Ex1, Ex2, Ey1, Ey2, Da, Db) \
-  ((Da) * (oldHz) + (Db) * ((Ex1) - (Ex2) - (Ey1) + (Ey2)))
+#define calculateHz_3D_Precalc(oldHz, Ex1, Ex2, Ey1, Ey2, Da, Db, Mz_delta) \
+  ((Da) * (oldHz) + (Db) * ((Ex1) - (Ex2) - (Ey1) + (Ey2) - Mz_delta))
 
 /* 2D Kernels with precalculated coefficients */
-#define calculateEx_2D_TEz_Precalc(oldEx, Hz1, Hz2, Ca, Cb) \
-  calculateEx_3D_Precalc(oldEx, Hz1, Hz2, FPValue(0.0), FPValue(0.0), Ca, Cb)
-
-#define calculateEy_2D_TEz_Precalc(oldEy, Hz1, Hz2, Ca, Cb) \
-  calculateEy_3D_Precalc(oldEy, FPValue(0.0), FPValue(0.0), Hz1, Hz2, Ca, Cb)
-
-#define calculateHx_2D_TMz_Precalc(oldHx, Ez1, Ez2, Da, Db) \
-  calculateHx_3D_Precalc(oldHx, FPValue(0.0), FPValue(0.0), Ez1, Ez2, Da, Db)
-
-#define calculateHy_2D_TMz_Precalc(oldHy, Ez1, Ez2, Da, Db) \
-  calculateHy_3D_Precalc(oldHy, Ez1, Ez2, FPValue(0.0), FPValue(0.0), Da, Db)
+// #define calculateEx_2D_TEz_Precalc(oldEx, Hz1, Hz2, Ca, Cb) \
+//   calculateEx_3D_Precalc(oldEx, Hz1, Hz2, FPValue(0.0), FPValue(0.0), Ca, Cb)
+//
+// #define calculateEy_2D_TEz_Precalc(oldEy, Hz1, Hz2, Ca, Cb) \
+//   calculateEy_3D_Precalc(oldEy, FPValue(0.0), FPValue(0.0), Hz1, Hz2, Ca, Cb)
+//
+// #define calculateHx_2D_TMz_Precalc(oldHx, Ez1, Ez2, Da, Db) \
+//   calculateHx_3D_Precalc(oldHx, FPValue(0.0), FPValue(0.0), Ez1, Ez2, Da, Db)
+//
+// #define calculateHy_2D_TMz_Precalc(oldHy, Ez1, Ez2, Da, Db) \
+//   calculateHy_3D_Precalc(oldHy, Ez1, Ez2, FPValue(0.0), FPValue(0.0), Da, Db)
 
 /* 3D Kernels */
-#define calculateEx_3D(oldEx, Hz1, Hz2, Hy1, Hy2, dt, dx, eps) \
-  calculateEx_3D_Precalc(oldEx, Hz1, Hz2, Hy1, Hy2, FPValue(1.0), (dt) / ((eps) * (dx)))
+#define calculateEx_3D(oldEx, Hz1, Hz2, Hy1, Hy2, Jx, dt, dx, eps) \
+  calculateEx_3D_Precalc(oldEx, Hz1, Hz2, Hy1, Hy2, FPValue(1.0), (dt) / ((eps) * (dx)), (Jx) * (dx))
 
-#define calculateEy_3D(oldEy, Hx1, Hx2, Hz1, Hz2, dt, dx, eps) \
-  calculateEy_3D_Precalc(oldEy, Hx1, Hx2, Hz1, Hz2, FPValue(1.0), (dt) / ((eps) * (dx)))
+#define calculateEy_3D(oldEy, Hx1, Hx2, Hz1, Hz2, Jy, dt, dx, eps) \
+  calculateEy_3D_Precalc(oldEy, Hx1, Hx2, Hz1, Hz2, FPValue(1.0), (dt) / ((eps) * (dx)), (Jy) * (dx))
 
-#define calculateEz_3D(oldEz, Hy1, Hy2, Hx1, Hx2, dt, dx, eps) \
-  calculateEz_3D_Precalc(oldEz, Hy1, Hy2, Hx1, Hx2, FPValue(1.0), (dt) / ((eps) * (dx)))
+#define calculateEz_3D(oldEz, Hy1, Hy2, Hx1, Hx2, Jz, dt, dx, eps) \
+  calculateEz_3D_Precalc(oldEz, Hy1, Hy2, Hx1, Hx2, FPValue(1.0), (dt) / ((eps) * (dx)), (Jz) * (dx))
 
-#define calculateHx_3D(oldHx, Ey1, Ey2, Ez1, Ez2, dt, dx, mu) \
-  calculateHx_3D_Precalc(oldHx, Ey1, Ey2, Ez1, Ez2, FPValue(1.0), (dt) / ((mu) * (dx)))
+#define calculateHx_3D(oldHx, Ey1, Ey2, Ez1, Ez2, Mx, dt, dx, mu) \
+  calculateHx_3D_Precalc(oldHx, Ey1, Ey2, Ez1, Ez2, FPValue(1.0), (dt) / ((mu) * (dx)), (Mx) * (dx))
 
-#define calculateHy_3D(oldHy, Ez1, Ez2, Ex1, Ex2, dt, dx, mu) \
-  calculateHy_3D_Precalc(oldHy, Ez1, Ez2, Ex1, Ex2, FPValue(1.0), (dt) / ((mu) * (dx)))
+#define calculateHy_3D(oldHy, Ez1, Ez2, Ex1, Ex2, My, dt, dx, mu) \
+  calculateHy_3D_Precalc(oldHy, Ez1, Ez2, Ex1, Ex2, FPValue(1.0), (dt) / ((mu) * (dx)), (My) * (dx))
 
-#define calculateHz_3D(oldHz, Ex1, Ex2, Ey1, Ey2, dt, dx, mu) \
-  calculateHz_3D_Precalc(oldHz, Ex1, Ex2, Ey1, Ey2, FPValue(1.0), (dt) / ((mu) * (dx)))
+#define calculateHz_3D(oldHz, Ex1, Ex2, Ey1, Ey2, Mz, dt, dx, mu) \
+  calculateHz_3D_Precalc(oldHz, Ex1, Ex2, Ey1, Ey2, FPValue(1.0), (dt) / ((mu) * (dx)), (Mz) * (dx))
 
 /* 2D Kernels */
-#define calculateEx_2D_TEz(oldEx, Hz1, Hz2, dt, dx, eps) \
-  calculateEx_3D(oldEx, Hz1, Hz2, FPValue(0.0), FPValue(0.0), dt, dx, eps)
-
-#define calculateEy_2D_TEz(oldEy, Hz1, Hz2, dt, dx, eps) \
-  calculateEy_3D(oldEy, FPValue(0.0), FPValue(0.0), Hz1, Hz2, dt, dx, eps)
-
-#define calculateHx_2D_TMz(oldHx, Ez1, Ez2, dt, dx, mu) \
-  calculateHx_3D(oldHx, FPValue(0.0), FPValue(0.0), Ez1, Ez2, dt, dx, mu)
-
-#define calculateHy_2D_TMz(oldHy, Ez1, Ez2, dt, dx, mu) \
-  calculateHy_3D(oldHy, Ez1, Ez2, FPValue(0.0), FPValue(0.0), dt, dx, mu)
+// #define calculateEx_2D_TEz(oldEx, Hz1, Hz2, dt, dx, eps) \
+//   calculateEx_3D(oldEx, Hz1, Hz2, FPValue(0.0), FPValue(0.0), dt, dx, eps)
+//
+// #define calculateEy_2D_TEz(oldEy, Hz1, Hz2, dt, dx, eps) \
+//   calculateEy_3D(oldEy, FPValue(0.0), FPValue(0.0), Hz1, Hz2, dt, dx, eps)
+//
+// #define calculateHx_2D_TMz(oldHx, Ez1, Ez2, dt, dx, mu) \
+//   calculateHx_3D(oldHx, FPValue(0.0), FPValue(0.0), Ez1, Ez2, dt, dx, mu)
+//
+// #define calculateHy_2D_TMz(oldHy, Ez1, Ez2, dt, dx, mu) \
+//   calculateHy_3D(oldHy, Ez1, Ez2, FPValue(0.0), FPValue(0.0), dt, dx, mu)
 
 /* Kernels to calculate E from D and H from B */
 /*

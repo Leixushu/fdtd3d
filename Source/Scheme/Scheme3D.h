@@ -33,6 +33,13 @@ class Scheme3D: public Scheme
   Grid<GridCoordinate3D> *B1y;
   Grid<GridCoordinate3D> *B1z;
 
+  Grid<GridCoordinate3D> *Jx;
+  Grid<GridCoordinate3D> *Jy;
+  Grid<GridCoordinate3D> *Jz;
+  Grid<GridCoordinate3D> *Mx;
+  Grid<GridCoordinate3D> *My;
+  Grid<GridCoordinate3D> *Mz;
+
   Grid<GridCoordinate3D> *ExAmplitude;
   Grid<GridCoordinate3D> *EyAmplitude;
   Grid<GridCoordinate3D> *EzAmplitude;
@@ -212,6 +219,16 @@ public:
                Grid<GridCoordinate3D> *, Grid<GridCoordinate3D> *, Grid<GridCoordinate3D> *,
                Grid<GridCoordinate3D> *, Grid<GridCoordinate3D> *, Grid<GridCoordinate3D> *);
   FPValue Pointing_inc (FPValue angleTeta, FPValue anglePhi);
+
+  FieldValue getPrevJx (GridCoordinate3D posAbs, time_step t)
+  {
+#ifdef COMPLEX_FIELD_VALUES
+    // 2*(1+0.5*t_n)*c^2
+    assert(0);
+#else
+    return 2 * (1 + 0.5 * t * gridTimeStep) * SQR (PhysicsConst::SpeedOfLight);
+#endif
+  }
 };
 
 template<uint8_t EnumVal>
