@@ -18,7 +18,7 @@ function launch ()
 
   ../fdtd3d --time-steps $timesteps --sizex $size --same-size --3d --angle-phi 0 --dx $dx --wavelength $lambda \
     --log-level 0 --save-res --save-tfsf-e-incident --save-as-txt --use-tfsf --tfsf-sizex 2 --same-size-tfsf \
-    --courant-factor 0.5 &>/dev/null
+    --courant-factor 0.5 --save-tfsf-h-incident
 
   retval=$((0))
   error=$((0))
@@ -33,7 +33,7 @@ function launch ()
 
     exact=$(../exact $lambda $dx $i $n 0.5)
 
-    #exact_val_re=$(echo $exact | awk '{printf "%.17g", $1}')
+    exact_val_re=$(echo $exact | awk '{printf "%.17g", $1}')
     #exact_val_im=$(echo $exact | awk '{printf "%.17g", $2}')
     exact_val_mod=$(echo $exact | awk '{printf "%.17g", $3}')
 
@@ -54,10 +54,12 @@ function launch ()
 
     #norm_exact=$(echo $norm_exact $exact_val_mod | awk '{printf "%.17g", $1 + $2 * $2}')
     #norm_numerical=$(echo $norm_numerical $numerical_val_mod | awk '{printf "%.17g", $1 + $2 * $2}')
-    error=$(echo $error $exact_val_mod $numerical_val_mod | awk '{printf "%.17g", $1 + ($2-$3)*($2-$3)}')
+    #error=$(echo $error $exact_val_mod $numerical_val_mod | awk '{printf "%.17g", $1 + ($2-$3)*($2-$3)}')
+    error=$(echo $error $exact_val_re $numerical_val_re | awk '{printf "%.17g", $1 + ($2-$3)*($2-$3)}')
   done
 
-  cp current\[$timesteps\]_rank-0_EInc.txt $dx.txt
+  cp current\[$timesteps\]_rank-0_EInc.txt E$dx.txt
+  cp current\[$timesteps\]_rank-0_HInc.txt H$dx.txt
 
   #norm_exact=$(echo $norm_exact | awk '{printf "%.17g", sqrt($1)}')
   #norm_numerical=$(echo $norm_numerical | awk '{printf "%.17g", sqrt($1)}')
@@ -79,13 +81,13 @@ cd $TEST_DIR
 size="10"
 retval=$((0))
 
-launch $size 1001 0.0004 100
+launch $size 3 0.0004 150
 error1=$(echo $error)
 if [ $? -ne 0 ]; then
   retval=$((1))
 fi
 
-launch $size 2001 0.0002 200
+launch $size 601 0.0002 300
 error2=$(echo $error)
 if [ $? -ne 0 ]; then
   retval=$((1))

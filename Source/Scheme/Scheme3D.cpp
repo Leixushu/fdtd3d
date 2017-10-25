@@ -482,7 +482,7 @@ Scheme3D::performPlaneWaveESteps (time_step t)
 
   FPValue modifier = gridTimeStep / (relPhaseVelocity * PhysicsConst::Eps0 * gridStep);
 
-  for (grid_coord i = 1; i < size; ++i)
+  for (grid_coord i = 1; i < 101; ++i)
   {
     GridCoordinate1D pos (i);
 
@@ -496,18 +496,29 @@ Scheme3D::performPlaneWaveESteps (time_step t)
 
     FieldValue val = valE->getPrevValue () + modifier * (valH1->getPrevValue () - valH2->getPrevValue ());
 
-    valE->setCurValue (val);
+    if (t == 0)
+    {
+      FPValue arg = - 2 * PhysicsConst::Pi / sourceWaveLength * i * gridStep;
+      valE->setCurValue (sin(arg));
+    }
+    else
+    {
+      valE->setCurValue (val);
+    }
   }
 
   GridCoordinate1D pos (0);
   FieldPointValue *valE = EInc->getFieldPointValue (pos);
 
   FPValue arg = gridTimeStep * t * 2 * PhysicsConst::Pi * sourceFrequency;
+  FPValue arg1 = arg - 2 * PhysicsConst::Pi / sourceWaveLength * 100 * gridStep;
 
 #ifdef COMPLEX_FIELD_VALUES
   valE->setCurValue (FieldValue (sin (arg), cos (arg)));
+  EInc->getFieldPointValue (GridCoordinate1D(100))->setCurValue (FieldValue (sin (arg1), cos (arg1)));
 #else /* COMPLEX_FIELD_VALUES */
   valE->setCurValue (sin (arg));
+  EInc->getFieldPointValue (GridCoordinate1D(100))->setCurValue (sin (arg1));
 #endif /* !COMPLEX_FIELD_VALUES */
 
   ASSERT (EInc->getFieldPointValue (GridCoordinate1D (size - 1))->getCurValue () == getFieldValueRealOnly (0.0));
@@ -524,7 +535,7 @@ Scheme3D::performPlaneWaveHSteps (time_step t)
 
   FPValue modifier = gridTimeStep / (relPhaseVelocity * PhysicsConst::Mu0 * gridStep);
 
-  for (grid_coord i = 0; i < size - 1; ++i)
+  for (grid_coord i = 0; i < 100; ++i)
   {
     GridCoordinate1D pos (i);
 
@@ -536,7 +547,17 @@ Scheme3D::performPlaneWaveHSteps (time_step t)
     FieldPointValue *valE1 = EInc->getFieldPointValue (posLeft);
     FieldPointValue *valE2 = EInc->getFieldPointValue (posRight);
 
-    FieldValue val = valH->getPrevValue () + modifier * (valE1->getPrevValue () - valE2->getPrevValue ());
+    FieldValue val;
+    if (t == 0)
+    {
+      FPValue arg = - 0.5 * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * (i + 0.5) * gridStep;
+      FPValue prev = (-1 / (PhysicsConst::Mu0 * PhysicsConst::SpeedOfLight)) * sin(arg);
+      val = prev + modifier * (valE1->getPrevValue () - valE2->getPrevValue ());
+    }
+    else
+    {
+      val = valH->getPrevValue () + modifier * (valE1->getPrevValue () - valE2->getPrevValue ());
+    }
 
     valH->setCurValue (val);
   }
