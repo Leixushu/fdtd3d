@@ -496,21 +496,35 @@ Scheme3D::performPlaneWaveESteps (time_step t)
 
     FieldValue val = valE->getPrevValue () + modifier * (valH1->getPrevValue () - valH2->getPrevValue ());
 
+    // if (i == 99)
+    // {
+    //   printf ("!!!! %u: %f, %f, %f | %f\n", t, valE->getPrevValue (), valH1->getPrevValue (), valH2->getPrevValue (), val);
+    // }
+
     if (t == 0)
     {
-      FPValue arg = - 2 * PhysicsConst::Pi / sourceWaveLength * i * gridStep;
+      FPValue arg = -t * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * i * gridStep;
       valE->setCurValue (sin(arg));
     }
     else
     {
       valE->setCurValue (val);
     }
+
+    // printf ("!! %u %f\n", i,
+    // sin(t * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * i * gridStep));
+    //val);
+
+    // if (i == 99)
+    // {
+    //   printf ("!!!! %u %f\n", t, val);
+    // }
   }
 
   GridCoordinate1D pos (0);
   FieldPointValue *valE = EInc->getFieldPointValue (pos);
 
-  FPValue arg = gridTimeStep * t * 2 * PhysicsConst::Pi * sourceFrequency;
+  FPValue arg = -gridTimeStep * t * 2 * PhysicsConst::Pi * sourceFrequency;
   FPValue arg1 = arg - 2 * PhysicsConst::Pi / sourceWaveLength * 100 * gridStep;
 
 #ifdef COMPLEX_FIELD_VALUES
@@ -548,16 +562,29 @@ Scheme3D::performPlaneWaveHSteps (time_step t)
     FieldPointValue *valE2 = EInc->getFieldPointValue (posRight);
 
     FieldValue val;
+    FPValue prev;
     if (t == 0)
     {
-      FPValue arg = - 0.5 * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * (i + 0.5) * gridStep;
-      FPValue prev = (-1 / (PhysicsConst::Mu0 * PhysicsConst::SpeedOfLight)) * sin(arg);
-      val = prev + modifier * (valE1->getPrevValue () - valE2->getPrevValue ());
+      FPValue arg = -(t+ 0.5) * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * (i + 0.5) * gridStep;
+      prev = (-1 / (PhysicsConst::Mu0 * PhysicsConst::SpeedOfLight)) * sin(arg);
+      val = prev;//prev + modifier * (valE1->getPrevValue () - valE2->getPrevValue ());
     }
     else
     {
       val = valH->getPrevValue () + modifier * (valE1->getPrevValue () - valE2->getPrevValue ());
+      prev = valH->getPrevValue ();
     }
+
+    // printf ("!! %u %f\n", i,
+    // //(-1 / (PhysicsConst::Mu0 * PhysicsConst::SpeedOfLight)) * sin((t+0.5) * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * (i + 0.5) * gridStep));
+    // val);
+
+    // if (i == 99)
+    // {
+    //   printf ("!!!! %u: %f, %f, %f | %f >> %f, %f %f\n", t, prev, valE1->getPrevValue (), valE2->getPrevValue (), val,
+    //   (-1 / (PhysicsConst::Mu0 * PhysicsConst::SpeedOfLight)) * sin(0.5 * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * (99 + 0.5) * gridStep),
+    //   sin(- 2 * PhysicsConst::Pi / sourceWaveLength * 99 * gridStep), sin(- 2 * PhysicsConst::Pi / sourceWaveLength * 100 * gridStep));
+    // }
 
     valH->setCurValue (val);
   }

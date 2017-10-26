@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+#set -x
 
 BASE_DIR=$1
 SOURCE_DIR=$2
@@ -81,13 +81,13 @@ cd $TEST_DIR
 size="10"
 retval=$((0))
 
-launch $size 3 0.0004 150
+launch $size 501 0.0004 100
 error1=$(echo $error)
 if [ $? -ne 0 ]; then
   retval=$((1))
 fi
 
-launch $size 601 0.0002 300
+launch $size 1001 0.0002 200
 error2=$(echo $error)
 if [ $? -ne 0 ]; then
   retval=$((1))
