@@ -104,6 +104,13 @@ SETTINGS_ELEM_FIELD_TYPE_NONE(doUseMetamaterials, getDoUseMetamaterials, bool, f
 SETTINGS_ELEM_FIELD_TYPE_NONE(doUseAmplitudeMode, getDoUseAmplitudeMode, bool, false, "--use-amp-mode", "Use amplitude mode")
 
 /*
+ * Test border conditions and initial values
+ */
+SETTINGS_ELEM_FIELD_TYPE_NONE(doUseTestBorderCondition, getDoUseTestBorderCondition, bool, false, "--use-test-border-condition", "Test border conditions")
+SETTINGS_ELEM_FIELD_TYPE_NONE(doUseTestStartValues, getDoUseTestStartValues, bool, false, "--use-test-start-values", "Test start values")
+SETTINGS_ELEM_FIELD_TYPE_NONE(doCalculateTestDiffNorm, getDoCalculateTestDiffNorm, bool, false, "--calc-test-diff-norm", "Calculate test norm of difference with exact solution")
+
+/*
  * NTFF
  */
 SETTINGS_ELEM_FIELD_TYPE_NONE(doCalcReverseNTFF, getDoCalcReverseNTFF, bool, false, "--ntff-reverse", "Calculate NTFF reverse diagram")

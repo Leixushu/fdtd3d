@@ -1294,52 +1294,139 @@ Scheme3D::calculateEzStep (time_step t, GridCoordinate3D EzStart, GridCoordinate
 {
   FPValue eps0 = PhysicsConst::Eps0;
 
-  for (int i = EzStart.getX (); i < EzEnd.getX (); ++i)
+  if (!solverSettings.getDoUseTestBorderCondition () || t > 0)
   {
-    for (int j = EzStart.getY (); j < EzEnd.getY (); ++j)
+    for (int i = EzStart.getX (); i < EzEnd.getX (); ++i)
     {
-      for (int k = EzStart.getZ (); k < EzEnd.getZ (); ++k)
+      for (int j = EzStart.getY (); j < EzEnd.getY (); ++j)
       {
-        GridCoordinate3D pos (i, j, k);
-        GridCoordinate3D posAbs = Ez->getTotalPosition (pos);
-
-        FieldPointValue* valEz = Ez->getFieldPointValue (pos);
-
-        FPValue eps = yeeLayout->getMaterial (posAbs, GridType::EZ, Eps, GridType::EPS);
-
-        GridCoordinate3D posLeft = yeeLayout->getEzCircuitElement (pos, LayoutDirection::LEFT);
-        GridCoordinate3D posRight = yeeLayout->getEzCircuitElement (pos, LayoutDirection::RIGHT);
-        GridCoordinate3D posDown = yeeLayout->getEzCircuitElement (pos, LayoutDirection::DOWN);
-        GridCoordinate3D posUp = yeeLayout->getEzCircuitElement (pos, LayoutDirection::UP);
-
-        FieldPointValue* valHy1 = Hy->getFieldPointValue (posRight);
-        FieldPointValue* valHy2 = Hy->getFieldPointValue (posLeft);
-
-        FieldPointValue* valHx1 = Hx->getFieldPointValue (posUp);
-        FieldPointValue* valHx2 = Hx->getFieldPointValue (posDown);
-
-        FieldValue prevHx1 = valHx1->getPrevValue ();
-        FieldValue prevHx2 = valHx2->getPrevValue ();
-        FieldValue prevHy1 = valHy1->getPrevValue ();
-        FieldValue prevHy2 = valHy2->getPrevValue ();
-
-        if (solverSettings.getDoUseTFSF ())
+        for (int k = EzStart.getZ (); k < EzEnd.getZ (); ++k)
         {
-          calculateEzTFSF (posAbs, prevHy1, prevHy2, prevHx1, prevHx2, posLeft, posRight, posDown, posUp);
+          GridCoordinate3D pos (i, j, k);
+          GridCoordinate3D posAbs = Ez->getTotalPosition (pos);
+
+          FieldPointValue* valEz = Ez->getFieldPointValue (pos);
+
+          FPValue eps = yeeLayout->getMaterial (posAbs, GridType::EZ, Eps, GridType::EPS);
+
+          GridCoordinate3D posLeft = yeeLayout->getEzCircuitElement (pos, LayoutDirection::LEFT);
+          GridCoordinate3D posRight = yeeLayout->getEzCircuitElement (pos, LayoutDirection::RIGHT);
+          GridCoordinate3D posDown = yeeLayout->getEzCircuitElement (pos, LayoutDirection::DOWN);
+          GridCoordinate3D posUp = yeeLayout->getEzCircuitElement (pos, LayoutDirection::UP);
+
+          FieldPointValue* valHy1 = Hy->getFieldPointValue (posRight);
+          FieldPointValue* valHy2 = Hy->getFieldPointValue (posLeft);
+
+          FieldPointValue* valHx1 = Hx->getFieldPointValue (posUp);
+          FieldPointValue* valHx2 = Hx->getFieldPointValue (posDown);
+
+          FieldValue prevHx1 = valHx1->getPrevValue ();
+          FieldValue prevHx2 = valHx2->getPrevValue ();
+          FieldValue prevHy1 = valHy1->getPrevValue ();
+          FieldValue prevHy2 = valHy2->getPrevValue ();
+
+          if (solverSettings.getDoUseTFSF ())
+          {
+            calculateEzTFSF (posAbs, prevHy1, prevHy2, prevHx1, prevHx2, posLeft, posRight, posDown, posUp);
+          }
+
+          FieldValue val = calculateEz_3D (valEz->getPrevValue (),
+                                           prevHy1,
+                                           prevHy2,
+                                           prevHx1,
+                                           prevHx2,
+                                           gridTimeStep,
+                                           gridStep,
+                                           eps * eps0);
+
+          valEz->setCurValue (val);
         }
-
-        FieldValue val = calculateEz_3D (valEz->getPrevValue (),
-                                         prevHy1,
-                                         prevHy2,
-                                         prevHx1,
-                                         prevHx2,
-                                         gridTimeStep,
-                                         gridStep,
-                                         eps * eps0);
-
-        valEz->setCurValue (val);
       }
     }
+  }
+
+  if (solverSettings.getDoUseTestBorderCondition ())
+  {
+    for (int i = 0; i < Ez->getSize ().getX (); ++i)
+    {
+      for (int j = 0; j < Ez->getSize ().getY (); ++j)
+      {
+        for (int k = 0; k < Ez->getSize ().getZ (); ++k)
+        {
+          GridCoordinate3D pos (i, j, k);
+          GridCoordinate3D posAbs = Ez->getTotalPosition (pos);
+
+          if (posAbs.getX () != 0 && posAbs.getX () != Ez->getTotalSize ().getX () - 1
+              && posAbs.getY () != 0 && posAbs.getY () != Ez->getTotalSize ().getY () - 1
+              && posAbs.getZ () != 0 && posAbs.getZ () != Ez->getTotalSize ().getX () - 1)
+          {
+            continue;
+          }
+
+          GridCoordinateFP3D realCoord = yeeLayout->getEzCoordFP (posAbs);
+          FieldPointValue* valEz = Ez->getFieldPointValue (pos);
+
+          FPValue arg = t * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
+#ifdef COMPLEX_FIELD_VALUES
+          valEz->setCurValue (FieldValue (sin(arg), cos(arg)));
+#else
+          valEz->setCurValue (FieldValue (sin(arg)));
+#endif
+        }
+      }
+    }
+  }
+
+  if (solverSettings.getDoCalculateTestDiffNorm ())
+  {
+#ifdef COMPLEX_FIELD_VALUES
+    FPValue normRe = 0.0;
+    FPValue normIm = 0.0;
+    FPValue normMod = 0.0;
+#else
+    FPValue norm = 0.0;
+#endif
+
+    for (int i = 0; i < Ez->getSize ().getX (); ++i)
+    {
+      for (int j = 0; j < Ez->getSize ().getY (); ++j)
+      {
+        for (int k = 0; k < Ez->getSize ().getZ (); ++k)
+        {
+          GridCoordinate3D pos (i, j, k);
+          GridCoordinate3D posAbs = Ez->getTotalPosition (pos);
+
+          GridCoordinateFP3D realCoord = yeeLayout->getEzCoordFP (posAbs);
+          FieldPointValue* valEz = Ez->getFieldPointValue (pos);
+
+          FieldValue numerical = valEz->getCurValue ();
+
+          FPValue arg = t * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
+#ifdef COMPLEX_FIELD_VALUES
+          FieldValue exact (sin (arg), cos (arg));
+          FPValue modExact = sqrt (SQR (exact.real ()) + SQR (exact.imag ()));
+          FPValue modNumerical = sqrt (SQR (numerical.real ()) + SQR (numerical.imag ()));
+
+          normRe += SQR (exact.real () - numerical.real ());
+          normIm += SQR (exact.imag () - numerical.imag ());
+          normMod += SQR (modExact - modNumerical);
+#else
+          FieldValue exact (sin (arg));
+          norm += SQR (exact - numerical);
+#endif
+        }
+      }
+    }
+
+#ifdef COMPLEX_FIELD_VALUES
+    normRe = sqrt (normRe / Ez->getSize ().calculateTotalCoord ());
+    normIm = sqrt (normIm / Ez->getSize ().calculateTotalCoord ());
+    normMod = sqrt (normMod / Ez->getSize ().calculateTotalCoord ());
+    printf ("!TEST: %u %.20f %.20f %.20f\n", t, normRe, normIm, normMod);
+#else
+    norm = sqrt (norm / Ez->getSize ().calculateTotalCoord ());
+    printf ("!TEST: %u %.20f\n", t, norm);
+#endif
   }
 }
 
@@ -1906,51 +1993,87 @@ Scheme3D::calculateHyStep (time_step t, GridCoordinate3D HyStart, GridCoordinate
   FPValue eps0 = PhysicsConst::Eps0;
   FPValue mu0 = PhysicsConst::Mu0;
 
-  for (int i = HyStart.getX (); i < HyEnd.getX (); ++i)
+  if (!solverSettings.getDoUseTestBorderCondition () || t > 0)
   {
-    for (int j = HyStart.getY (); j < HyEnd.getY (); ++j)
+    for (int i = HyStart.getX (); i < HyEnd.getX (); ++i)
     {
-      for (int k = HyStart.getZ (); k < HyEnd.getZ (); ++k)
+      for (int j = HyStart.getY (); j < HyEnd.getY (); ++j)
       {
-        GridCoordinate3D pos (i, j, k);
-        GridCoordinate3D posAbs = Hy->getTotalPosition (pos);
-
-        FieldPointValue* valHy = Hy->getFieldPointValue (pos);
-
-        FPValue mu = yeeLayout->getMaterial (posAbs, GridType::HY, Mu, GridType::MU);
-
-        GridCoordinate3D posLeft = yeeLayout->getHyCircuitElement (pos, LayoutDirection::LEFT);
-        GridCoordinate3D posRight = yeeLayout->getHyCircuitElement (pos, LayoutDirection::RIGHT);
-        GridCoordinate3D posBack = yeeLayout->getHyCircuitElement (pos, LayoutDirection::BACK);
-        GridCoordinate3D posFront = yeeLayout->getHyCircuitElement (pos, LayoutDirection::FRONT);
-
-        FieldPointValue* valEz1 = Ez->getFieldPointValue (posRight);
-        FieldPointValue* valEz2 = Ez->getFieldPointValue (posLeft);
-
-        FieldPointValue* valEx1 = Ex->getFieldPointValue (posFront);
-        FieldPointValue* valEx2 = Ex->getFieldPointValue (posBack);
-
-        FieldValue prevEz1 = valEz1->getPrevValue ();
-        FieldValue prevEz2 = valEz2->getPrevValue ();
-
-        FieldValue prevEx1 = valEx1->getPrevValue ();
-        FieldValue prevEx2 = valEx2->getPrevValue ();
-
-        if (solverSettings.getDoUseTFSF ())
+        for (int k = HyStart.getZ (); k < HyEnd.getZ (); ++k)
         {
-          calculateHyTFSF (posAbs, prevEz1, prevEz2, prevEx1, prevEx2, posLeft, posRight, posBack, posFront);
+          GridCoordinate3D pos (i, j, k);
+          GridCoordinate3D posAbs = Hy->getTotalPosition (pos);
+
+          FieldPointValue* valHy = Hy->getFieldPointValue (pos);
+
+          FPValue mu = yeeLayout->getMaterial (posAbs, GridType::HY, Mu, GridType::MU);
+
+          GridCoordinate3D posLeft = yeeLayout->getHyCircuitElement (pos, LayoutDirection::LEFT);
+          GridCoordinate3D posRight = yeeLayout->getHyCircuitElement (pos, LayoutDirection::RIGHT);
+          GridCoordinate3D posBack = yeeLayout->getHyCircuitElement (pos, LayoutDirection::BACK);
+          GridCoordinate3D posFront = yeeLayout->getHyCircuitElement (pos, LayoutDirection::FRONT);
+
+          FieldPointValue* valEz1 = Ez->getFieldPointValue (posRight);
+          FieldPointValue* valEz2 = Ez->getFieldPointValue (posLeft);
+
+          FieldPointValue* valEx1 = Ex->getFieldPointValue (posFront);
+          FieldPointValue* valEx2 = Ex->getFieldPointValue (posBack);
+
+          FieldValue prevEz1 = valEz1->getPrevValue ();
+          FieldValue prevEz2 = valEz2->getPrevValue ();
+
+          FieldValue prevEx1 = valEx1->getPrevValue ();
+          FieldValue prevEx2 = valEx2->getPrevValue ();
+
+          if (solverSettings.getDoUseTFSF ())
+          {
+            calculateHyTFSF (posAbs, prevEz1, prevEz2, prevEx1, prevEx2, posLeft, posRight, posBack, posFront);
+          }
+
+          FieldValue val = calculateHy_3D (valHy->getPrevValue (),
+                                           prevEz1,
+                                           prevEz2,
+                                           prevEx1,
+                                           prevEx2,
+                                           gridTimeStep,
+                                           gridStep,
+                                           mu * mu0);
+
+          valHy->setCurValue (val);
         }
+      }
+    }
+  }
 
-        FieldValue val = calculateHy_3D (valHy->getPrevValue (),
-                                         prevEz1,
-                                         prevEz2,
-                                         prevEx1,
-                                         prevEx2,
-                                         gridTimeStep,
-                                         gridStep,
-                                         mu * mu0);
+  if (solverSettings.getDoUseTestBorderCondition ())
+  {
+    for (int i = 0; i < Hy->getSize ().getX (); ++i)
+    {
+      for (int j = 0; j < Hy->getSize ().getY (); ++j)
+      {
+        for (int k = 0; k < Hy->getSize ().getZ (); ++k)
+        {
+          GridCoordinate3D pos (i, j, k);
+          GridCoordinate3D posAbs = Hy->getTotalPosition (pos);
 
-        valHy->setCurValue (val);
+          if (posAbs.getX () != 0 && posAbs.getX () != Hy->getTotalSize ().getX () - 1
+              && posAbs.getY () != 0 && posAbs.getY () != Hy->getTotalSize ().getY () - 1
+              && posAbs.getZ () != 0 && posAbs.getZ () != Hy->getTotalSize ().getX () - 1)
+          {
+            continue;
+          }
+
+          GridCoordinateFP3D realCoord = yeeLayout->getHyCoordFP (posAbs);
+          FieldPointValue* valHy = Hy->getFieldPointValue (pos);
+
+          FPValue arg = (t+0.5) * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
+          FPValue modifier = -1 / (PhysicsConst::Mu0 * PhysicsConst::SpeedOfLight);
+#ifdef COMPLEX_FIELD_VALUES
+          valHy->setCurValue (FieldValue (modifier * sin(arg), modifier * cos(arg)));
+#else
+          valHy->setCurValue (FieldValue (modifier * sin(arg)));
+#endif
+        }
       }
     }
   }
@@ -3447,9 +3570,59 @@ Scheme3D::initGrids ()
   Ex->initialize ();
   Ey->initialize ();
   Ez->initialize ();
+
+  if (solverSettings.getDoUseTestStartValues ())
+  {
+    for (int i = 0; i < Ez->getSize ().getX (); ++i)
+    {
+      for (int j = 0; j < Ez->getSize ().getY (); ++j)
+      {
+        for (int k = 0; k < Ez->getSize ().getZ (); ++k)
+        {
+          GridCoordinate3D pos (i, j, k);
+          FieldPointValue* valEz = Ez->getFieldPointValue (pos);
+
+          GridCoordinateFP3D realCoord = yeeLayout->getEzCoordFP (Ez->getTotalPosition (pos));
+
+          FPValue arg = - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
+#ifdef COMPLEX_FIELD_VALUES
+          valEz->setCurValue (FieldValue (sin(arg), cos(arg)));
+#else
+          valEz->setCurValue (FieldValue (sin(arg)));
+#endif
+        }
+      }
+    }
+  }
+
   Hx->initialize ();
   Hy->initialize ();
   Hz->initialize ();
+
+  if (solverSettings.getDoUseTestStartValues ())
+  {
+    for (int i = 0; i < Hy->getSize ().getX (); ++i)
+    {
+      for (int j = 0; j < Hy->getSize ().getY (); ++j)
+      {
+        for (int k = 0; k < Hy->getSize ().getZ (); ++k)
+        {
+          GridCoordinate3D pos (i, j, k);
+          FieldPointValue* valHy = Hy->getFieldPointValue (pos);
+
+          GridCoordinateFP3D realCoord = yeeLayout->getHyCoordFP (Hy->getTotalPosition (pos));
+
+          FPValue arg = 0.5 * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
+          FPValue modifier = -1 / (PhysicsConst::Mu0 * PhysicsConst::SpeedOfLight);
+#ifdef COMPLEX_FIELD_VALUES
+          valHy->setCurValue (FieldValue (modifier * sin(arg), modifier * cos(arg)));
+#else
+          valHy->setCurValue (FieldValue (modifier * sin(arg)));
+#endif
+        }
+      }
+    }
+  }
 
   if (solverSettings.getDoUsePML ())
   {
@@ -4206,11 +4379,6 @@ Scheme3D::Pointing_scat (FPValue angleTeta, FPValue anglePhi,
 FPValue
 Scheme3D::Pointing_inc (FPValue angleTeta, FPValue anglePhi)
 {
-  // GridCoordinateFP3D coord (Ez.getSize ().getX () / 2, Ez.getSize ().getY () / 2, Ez.getSize ().getZ () / 2);
-  //
-  // FieldValue val = approximateIncidentWaveE (coord) * approximateIncidentWaveH (coord) / FPValue(2.0);
-  //
-  // return val.real ();
   return sqrt (PhysicsConst::Eps0 / PhysicsConst::Mu0);
 }
 
