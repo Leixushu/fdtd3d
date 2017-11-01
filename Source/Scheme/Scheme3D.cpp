@@ -1338,6 +1338,8 @@ Scheme3D::calculateEzStep (time_step t, GridCoordinate3D EzStart, GridCoordinate
                                            gridTimeStep,
                                            gridStep,
                                            eps * eps0);
+          val += gridTimeStep * (-2 * yeeLayout->getEzCoordFP (posAbs).getX () * gridStep * t * gridTimeStep
+                                 + SQR(yeeLayout->getEzCoordFP (posAbs).getX () * gridStep)) * SQR(PhysicsConst::SpeedOfLight)*PhysicsConst::SpeedOfLight;
 
           valEz->setCurValue (val);
         }
@@ -1366,11 +1368,12 @@ Scheme3D::calculateEzStep (time_step t, GridCoordinate3D EzStart, GridCoordinate
           GridCoordinateFP3D realCoord = yeeLayout->getEzCoordFP (posAbs);
           FieldPointValue* valEz = Ez->getFieldPointValue (pos);
 
-          FPValue arg = t * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
+          // FPValue arg = t * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
 #ifdef COMPLEX_FIELD_VALUES
-          valEz->setCurValue (FieldValue (sin(arg), cos(arg)));
+          //valEz->setCurValue (FieldValue (sin(arg), cos(arg)));
+          ASSERT(0);
 #else
-          valEz->setCurValue (FieldValue (sin(arg)));
+          valEz->setCurValue (SQR (realCoord.getX() * gridStep) * (t+0.5) * gridTimeStep * SQR(PhysicsConst::SpeedOfLight)*PhysicsConst::SpeedOfLight);
 #endif
         }
       }
@@ -1385,6 +1388,7 @@ Scheme3D::calculateEzStep (time_step t, GridCoordinate3D EzStart, GridCoordinate
     FPValue normMod = 0.0;
 #else
     FPValue norm = 0.0;
+    FPValue max = 0.0;
 #endif
 
     for (int i = 0; i < Ez->getSize ().getX (); ++i)
@@ -1401,31 +1405,34 @@ Scheme3D::calculateEzStep (time_step t, GridCoordinate3D EzStart, GridCoordinate
 
           FieldValue numerical = valEz->getCurValue ();
 
-          FPValue arg = t * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
+          // FPValue arg = t * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
 #ifdef COMPLEX_FIELD_VALUES
-          FieldValue exact (sin (arg), cos (arg));
-          FPValue modExact = sqrt (SQR (exact.real ()) + SQR (exact.imag ()));
-          FPValue modNumerical = sqrt (SQR (numerical.real ()) + SQR (numerical.imag ()));
-
-          normRe += SQR (exact.real () - numerical.real ());
-          normIm += SQR (exact.imag () - numerical.imag ());
-          normMod += SQR (modExact - modNumerical);
+          // FieldValue exact (sin (arg), cos (arg));
+          // FPValue modExact = sqrt (SQR (exact.real ()) + SQR (exact.imag ()));
+          // FPValue modNumerical = sqrt (SQR (numerical.real ()) + SQR (numerical.imag ()));
+          //
+          // normRe += SQR (exact.real () - numerical.real ());
+          // normIm += SQR (exact.imag () - numerical.imag ());
+          // normMod += SQR (modExact - modNumerical);
 #else
-          FieldValue exact (sin (arg));
+          FieldValue exact (SQR (realCoord.getX() * gridStep) * (t+0.5) * gridTimeStep * SQR(PhysicsConst::SpeedOfLight)*PhysicsConst::SpeedOfLight);
           norm += SQR (exact - numerical);
+          if (exact > max)
+            max = exact;
+          //printf ("?? %d %d %d -> %.20f %.20f\n", i, j, k, exact, numerical);
 #endif
         }
       }
     }
 
 #ifdef COMPLEX_FIELD_VALUES
-    normRe = sqrt (normRe / Ez->getSize ().calculateTotalCoord ());
-    normIm = sqrt (normIm / Ez->getSize ().calculateTotalCoord ());
-    normMod = sqrt (normMod / Ez->getSize ().calculateTotalCoord ());
-    printf ("!TEST: %u %.20f %.20f %.20f\n", t, normRe, normIm, normMod);
+    // normRe = sqrt (normRe / Ez->getSize ().calculateTotalCoord ());
+    // normIm = sqrt (normIm / Ez->getSize ().calculateTotalCoord ());
+    // normMod = sqrt (normMod / Ez->getSize ().calculateTotalCoord ());
+    // printf ("!TEST: %u %.20f %.20f %.20f\n", t, normRe, normIm, normMod);
 #else
     norm = sqrt (norm / Ez->getSize ().calculateTotalCoord ());
-    printf ("!TEST: %u %.20f\n", t, norm);
+    printf ("!TEST: %u %.20f (%.20f )\n", t, norm, norm * 100.0/ max );
 #endif
   }
 }
@@ -2038,6 +2045,8 @@ Scheme3D::calculateHyStep (time_step t, GridCoordinate3D HyStart, GridCoordinate
                                            gridTimeStep,
                                            gridStep,
                                            mu * mu0);
+          val += gridTimeStep * (-2 * yeeLayout->getHyCoordFP (posAbs).getX () * gridStep * (t+0.5) * gridTimeStep / PhysicsConst::Mu0
+                                 + SQR(yeeLayout->getHyCoordFP (posAbs).getX () * gridStep) * PhysicsConst::Eps0) * SQR(PhysicsConst::SpeedOfLight)*PhysicsConst::SpeedOfLight;
 
           valHy->setCurValue (val);
         }
@@ -2066,12 +2075,12 @@ Scheme3D::calculateHyStep (time_step t, GridCoordinate3D HyStart, GridCoordinate
           GridCoordinateFP3D realCoord = yeeLayout->getHyCoordFP (posAbs);
           FieldPointValue* valHy = Hy->getFieldPointValue (pos);
 
-          FPValue arg = (t+0.5) * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
-          FPValue modifier = -1 / (PhysicsConst::Mu0 * PhysicsConst::SpeedOfLight);
+          // FPValue arg = (t+0.5) * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
+          // FPValue modifier = -1 / (PhysicsConst::Mu0 * PhysicsConst::SpeedOfLight);
 #ifdef COMPLEX_FIELD_VALUES
-          valHy->setCurValue (FieldValue (modifier * sin(arg), modifier * cos(arg)));
+          //valHy->setCurValue (FieldValue (modifier * sin(arg), modifier * cos(arg)));
 #else
-          valHy->setCurValue (FieldValue (modifier * sin(arg)));
+          valHy->setCurValue (SQR (realCoord.getX() * gridStep) * (t+1) * gridTimeStep * PhysicsConst::Eps0 * SQR(PhysicsConst::SpeedOfLight)*PhysicsConst::SpeedOfLight);
 #endif
         }
       }
@@ -3584,11 +3593,11 @@ Scheme3D::initGrids ()
 
           GridCoordinateFP3D realCoord = yeeLayout->getEzCoordFP (Ez->getTotalPosition (pos));
 
-          FPValue arg = - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
+          //FPValue arg = - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
 #ifdef COMPLEX_FIELD_VALUES
-          valEz->setCurValue (FieldValue (sin(arg), cos(arg)));
+          //valEz->setCurValue (FieldValue (sin(arg), cos(arg)));
 #else
-          valEz->setCurValue (FieldValue (sin(arg)));
+          valEz->setCurValue (SQR (realCoord.getX() * gridStep) * (0.5) * gridTimeStep * SQR(PhysicsConst::SpeedOfLight)*PhysicsConst::SpeedOfLight);
 #endif
         }
       }
@@ -3612,12 +3621,12 @@ Scheme3D::initGrids ()
 
           GridCoordinateFP3D realCoord = yeeLayout->getHyCoordFP (Hy->getTotalPosition (pos));
 
-          FPValue arg = 0.5 * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
-          FPValue modifier = -1 / (PhysicsConst::Mu0 * PhysicsConst::SpeedOfLight);
+          // FPValue arg = 0.5 * gridTimeStep * 2 * PhysicsConst::Pi * sourceFrequency - 2 * PhysicsConst::Pi / sourceWaveLength * realCoord.getX () * gridStep;
+          // FPValue modifier = -1 / (PhysicsConst::Mu0 * PhysicsConst::SpeedOfLight);
 #ifdef COMPLEX_FIELD_VALUES
-          valHy->setCurValue (FieldValue (modifier * sin(arg), modifier * cos(arg)));
+          // valHy->setCurValue (FieldValue (modifier * sin(arg), modifier * cos(arg)));
 #else
-          valHy->setCurValue (FieldValue (modifier * sin(arg)));
+          valHy->setCurValue (SQR (realCoord.getX() * gridStep) * (1) * gridTimeStep * PhysicsConst::Eps0 * SQR(PhysicsConst::SpeedOfLight)*PhysicsConst::SpeedOfLight);
 #endif
         }
       }

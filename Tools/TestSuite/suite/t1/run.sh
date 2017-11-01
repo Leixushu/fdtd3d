@@ -72,6 +72,8 @@ function launch ()
   return $retval
 }
 
+exit 0
+
 CUR_DIR=`pwd`
 TEST_DIR=$(dirname $(readlink -f $0))
 cd $TEST_DIR
